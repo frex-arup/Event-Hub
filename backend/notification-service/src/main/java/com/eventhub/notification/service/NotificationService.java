@@ -21,6 +21,7 @@ import java.util.UUID;
 /**
  * Dispatches notifications across channels: in-app, email, SMS, push.
  * All notifications are persisted to the database for in-app retrieval.
+ * Push notifications are sent via Firebase Cloud Messaging when enabled.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationPreferenceRepository preferenceRepository;
     private final JavaMailSender mailSender;
+    private final FirebasePushService firebasePushService;
 
     // ─────────────────────────────────────────────
     // Query methods (called by REST controller)
@@ -213,6 +215,23 @@ public class NotificationService {
 
         notificationRepository.save(notification);
         log.info("Notification persisted: type={} userId={} id={}", type, userId, notification.getId());
+
+        // Send Firebase push notification if user has push enabled
+        try {
+            NotificationPreference prefs = preferenceRepository.findByUserId(userId).orElse(null);
+            boolean pushEnabled = prefs == null || prefs.isPushEnabled(); // default true
+            if (pushEnabled) {
+                Map<String, String> pushData = new HashMap<>();
+                pushData.put("notificationId", notification.getId().toString());
+                pushData.put("type", type);
+                if (metadata != null) {
+                    pushData.putAll(metadata);
+                }
+                firebasePushService.sendToUser(userId, title, message, pushData);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send push notification for user={}: {}", userId, e.getMessage());
+        }
     }
 
     private String str(Map<String, Object> map, String key) {
