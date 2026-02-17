@@ -1,0 +1,93 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "eventhub-overview",
+    "title": "EventHub Platform Overview",
+    "tags": ["eventhub", "overview"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "Request Rate (all services)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count{application=~\".*service.*\"}[5m])) by (application)",
+            "legendFormat": "{{application}}"
+          }
+        ]
+      },
+      {
+        "title": "Error Rate (5xx)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\", application=~\".*service.*\"}[5m])) by (application)",
+            "legendFormat": "{{application}}"
+          }
+        ]
+      },
+      {
+        "title": "P99 Latency",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{application=~\".*service.*\"}[5m])) by (le, application))",
+            "legendFormat": "{{application}}"
+          }
+        ]
+      },
+      {
+        "title": "JVM Memory Usage",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "targets": [
+          {
+            "expr": "jvm_memory_used_bytes{area=\"heap\", application=~\".*service.*\"} / 1024 / 1024",
+            "legendFormat": "{{application}} heap (MB)"
+          }
+        ]
+      },
+      {
+        "title": "Kafka Consumer Lag",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+        "targets": [
+          {
+            "expr": "sum(kafka_consumer_records_lag_max{application=~\".*service.*\"}) by (application, topic)",
+            "legendFormat": "{{application}} - {{topic}}"
+          }
+        ]
+      },
+      {
+        "title": "DB Connection Pool",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+        "targets": [
+          {
+            "expr": "hikaricp_connections_active{application=~\".*service.*\"}",
+            "legendFormat": "{{application}} active"
+          },
+          {
+            "expr": "hikaricp_connections_pending{application=~\".*service.*\"}",
+            "legendFormat": "{{application}} pending"
+          }
+        ]
+      },
+      {
+        "title": "Booking Saga States",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
+        "targets": [
+          {
+            "expr": "sum(booking_saga_state_count) by (state)",
+            "legendFormat": "{{state}}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: recommendation-service
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    consumer:
+      group-id: recommendation-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    tags:
+      application: recommendation-service
+
+logging:
+  level:
+    com.eventhub.recommendation: DEBUG

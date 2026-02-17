@@ -1,0 +1,108 @@
+groups:
+  - name: eventhub-service-alerts
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (application) / sum(rate(http_server_requests_seconds_count[5m])) by (application) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on {{ $labels.application }}"
+          description: "{{ $labels.application }} has >5% error rate (current: {{ $value | humanizePercentage }})"
+
+      # High latency
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, application)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P99 latency on {{ $labels.application }}"
+          description: "{{ $labels.application }} P99 latency >2s (current: {{ $value }}s)"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job=~".*-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is DOWN"
+          description: "{{ $labels.instance }} has been unreachable for >1 minute"
+
+      # JVM heap pressure
+      - alert: HighHeapUsage
+        expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High JVM heap usage on {{ $labels.application }}"
+          description: "Heap usage >85% (current: {{ $value | humanizePercentage }})"
+
+  - name: eventhub-kafka-alerts
+    rules:
+      # Kafka consumer lag
+      - alert: KafkaConsumerLag
+        expr: sum(kafka_consumer_records_lag_max) by (application, topic) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag on {{ $labels.application }}"
+          description: "Topic {{ $labels.topic }} lag >1000 (current: {{ $value }})"
+
+      # Kafka consumer not consuming
+      - alert: KafkaConsumerStalled
+        expr: rate(kafka_consumer_records_consumed_total[5m]) == 0 and kafka_consumer_records_lag_max > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka consumer stalled on {{ $labels.application }}"
+          description: "Consumer for topic {{ $labels.topic }} is not consuming but has lag"
+
+  - name: eventhub-db-alerts
+    rules:
+      # DB connection pool exhaustion
+      - alert: DBConnectionPoolExhausted
+        expr: hikaricp_connections_pending > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB connection pool pressure on {{ $labels.application }}"
+          description: "{{ $value }} pending connections for >5 minutes"
+
+      # Slow queries
+      - alert: SlowDBQueries
+        expr: rate(hikaricp_connections_usage_seconds_sum[5m]) / rate(hikaricp_connections_usage_seconds_count[5m]) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow DB queries on {{ $labels.application }}"
+          description: "Average query time >1s"
+
+  - name: eventhub-business-alerts
+    rules:
+      # Booking saga failures
+      - alert: BookingSagaFailureSpike
+        expr: rate(booking_saga_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Booking saga failure spike"
+          description: "Booking saga failure rate >0.1/s"
+
+      # Payment failure spike
+      - alert: PaymentFailureSpike
+        expr: rate(payment_failures_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Payment failure spike"
+          description: "Payment failure rate >0.05/s"

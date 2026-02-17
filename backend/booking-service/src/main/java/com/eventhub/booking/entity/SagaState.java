@@ -1,0 +1,14 @@
+package com.eventhub.booking.entity;
+
+public enum SagaState {
+    INITIATED,
+    SEATS_LOCKED,
+    PAYMENT_PENDING,
+    PAYMENT_PROCESSING,
+    PAYMENT_COMPLETED,
+    TICKET_ISSUED,
+    COMPLETED,
+    COMPENSATING,
+    COMPENSATION_COMPLETED,
+    FAILED
+}

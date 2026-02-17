@@ -1,0 +1,57 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "prometheus-alerts.yml"
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'identity-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['identity-service:8081']
+
+  - job_name: 'event-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['event-service:8082']
+
+  - job_name: 'seat-inventory-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['seat-inventory-service:8084']
+
+  - job_name: 'booking-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['booking-service:8085']
+
+  - job_name: 'payment-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['payment-service:8086']
+
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['notification-service:8087']
+
+  - job_name: 'social-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['social-service:8088']
+
+  - job_name: 'recommendation-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['recommendation-service:8089']
+
+  - job_name: 'finance-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['finance-service:8090']
