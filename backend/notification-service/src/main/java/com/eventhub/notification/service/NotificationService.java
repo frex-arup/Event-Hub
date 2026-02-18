@@ -189,8 +189,8 @@ public class NotificationService {
                     "Start discovering amazing events and booking your seats today.\n\n" +
                     "— The EventHub Team");
 
-            // mailSender.send(msg); // Uncomment when SMTP is configured
-            log.info("Welcome email queued for {} ({})", name, email);
+            mailSender.send(msg);
+            log.info("Welcome email sent to {} ({})", name, email);
         } catch (Exception e) {
             log.warn("Failed to send welcome email to {}: {}", email, e.getMessage());
         }

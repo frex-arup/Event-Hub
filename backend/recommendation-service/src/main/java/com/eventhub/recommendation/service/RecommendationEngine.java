@@ -32,6 +32,7 @@ public class RecommendationEngine {
     private static final String EVENT_POPULARITY_KEY = "rec:popularity";
     private static final String USER_BOOKINGS_KEY = "rec:bookings:";
     private static final String CATEGORY_EVENTS_KEY = "rec:category:";
+    private static final String USER_FOLLOWING_KEY = "rec:following:";
 
     // ─────────────────────────────────────────────
     // Kafka Signal Consumers
@@ -72,6 +73,24 @@ public class RecommendationEngine {
         }
     }
 
+    @KafkaListener(topics = "user-events", groupId = "recommendation-service-group")
+    public void handleUserEvent(Map<String, Object> event) {
+        String eventType = (String) event.get("eventType");
+        if ("user.followed".equals(eventType)) {
+            String followerId = (String) event.get("followerId");
+            String followedId = (String) event.get("followedId");
+            if (followerId != null && followedId != null) {
+                redisTemplate.opsForSet().add(USER_FOLLOWING_KEY + followerId, followedId);
+            }
+        } else if ("user.unfollowed".equals(eventType)) {
+            String followerId = (String) event.get("followerId");
+            String followedId = (String) event.get("followedId");
+            if (followerId != null && followedId != null) {
+                redisTemplate.opsForSet().remove(USER_FOLLOWING_KEY + followerId, followedId);
+            }
+        }
+    }
+
     // ─────────────────────────────────────────────
     // Recommendation Queries
     // ─────────────────────────────────────────────
@@ -95,7 +114,20 @@ public class RecommendationEngine {
             }
         }
 
-        // 2. Trending events (fill remaining slots)
+        // 2. Social-graph: events booked by users this person follows
+        Set<String> following = redisTemplate.opsForSet().members(USER_FOLLOWING_KEY + userId);
+        if (following != null && !following.isEmpty()) {
+            for (String followedUser : following) {
+                Set<String> friendBookings = redisTemplate.opsForSet()
+                        .members(USER_BOOKINGS_KEY + followedUser);
+                if (friendBookings != null) {
+                    recommendations.addAll(friendBookings);
+                }
+                if (recommendations.size() >= limit * 3) break;
+            }
+        }
+
+        // 3. Trending events (fill remaining slots)
         Set<ZSetOperations.TypedTuple<String>> trending = redisTemplate.opsForZSet()
                 .reverseRangeWithScores(EVENT_POPULARITY_KEY, 0, limit * 2);
         if (trending != null) {

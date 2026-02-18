@@ -10,6 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -111,9 +117,17 @@ public class OAuthService {
                     "redirect_uri", redirectUri
             );
 
+            // GitHub requires Accept: application/json to return JSON instead of URL-encoded form
+            HttpHeaders tokenHeaders = new HttpHeaders();
+            tokenHeaders.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+            tokenHeaders.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, String>> tokenEntity = new HttpEntity<>(tokenRequest, tokenHeaders);
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> tokenResponse = restTemplate.postForObject(
-                    "https://github.com/login/oauth/access_token", tokenRequest, Map.class);
+            ResponseEntity<Map> tokenResponseEntity = restTemplate.exchange(
+                    "https://github.com/login/oauth/access_token",
+                    HttpMethod.POST, tokenEntity, Map.class);
+            Map<String, Object> tokenResponse = tokenResponseEntity.getBody();
 
             if (tokenResponse == null || !tokenResponse.containsKey("access_token")) {
                 throw new IllegalStateException("Failed to exchange GitHub auth code");
@@ -121,11 +135,17 @@ public class OAuthService {
 
             String accessToken = (String) tokenResponse.get("access_token");
 
-            // Fetch user info
+            // Fetch user info with Authorization bearer header
+            HttpHeaders userHeaders = new HttpHeaders();
+            userHeaders.setBearerAuth(accessToken);
+            userHeaders.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+            HttpEntity<Void> userEntity = new HttpEntity<>(userHeaders);
+
             @SuppressWarnings("unchecked")
-            Map<String, Object> userInfo = restTemplate.getForObject(
+            ResponseEntity<Map> userResponseEntity = restTemplate.exchange(
                     "https://api.github.com/user",
-                    Map.class);
+                    HttpMethod.GET, userEntity, Map.class);
+            Map<String, Object> userInfo = userResponseEntity.getBody();
 
             if (userInfo == null) {
                 throw new IllegalStateException("Failed to fetch GitHub user info");

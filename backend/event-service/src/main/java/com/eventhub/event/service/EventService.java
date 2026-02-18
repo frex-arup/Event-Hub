@@ -5,6 +5,8 @@ import com.eventhub.event.entity.EventCategory;
 import com.eventhub.event.entity.EventStatus;
 import com.eventhub.event.entity.Venue;
 import com.eventhub.event.repository.EventRepository;
+import com.eventhub.event.search.EventSearchService;
+import com.eventhub.event.search.EventSearchService.EventDocument;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,6 +29,7 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final EventSearchService searchService;
 
     @Transactional(readOnly = true)
     public Page<Event> getEvents(int page, int size, String category, String search) {
@@ -112,6 +115,7 @@ public class EventService {
 
         log.info("Event published: {}", event.getId());
         publishEventMessage("event.published", event);
+        indexEventInElasticsearch(event);
         return event;
     }
 
@@ -124,6 +128,24 @@ public class EventService {
         if (newAvailable < 0) newAvailable = 0;
         event.setAvailableSeats(newAvailable);
         eventRepository.save(event);
+    }
+
+    private void indexEventInElasticsearch(Event event) {
+        try {
+            searchService.indexEvent(new EventDocument(
+                    event.getId().toString(),
+                    event.getTitle(),
+                    event.getDescription(),
+                    event.getCategory() != null ? event.getCategory().name() : "",
+                    event.getTags() != null ? List.copyOf(event.getTags()) : List.of(),
+                    event.getStatus().name(),
+                    event.getOrganizerId().toString(),
+                    event.getStartDate() != null ? event.getStartDate().toString() : "",
+                    event.getAvailableSeats()
+            ));
+        } catch (Exception e) {
+            log.warn("Failed to index event in Elasticsearch: {}", e.getMessage());
+        }
     }
 
     private void publishEventMessage(String eventType, Event event) {

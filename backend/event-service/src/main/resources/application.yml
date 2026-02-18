@@ -47,6 +47,10 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
 
+elasticsearch:
+  host: ${ELASTICSEARCH_HOST:localhost}
+  port: ${ELASTICSEARCH_PORT:9200}
+
 management:
   endpoints:
     web:

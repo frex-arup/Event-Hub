@@ -51,6 +51,14 @@ spec:
               value: "kafka:9092"
             - name: SPRING_DATA_REDIS_HOST
               value: "redis"
+            - name: OTEL_SERVICE_NAME
+              value: "booking-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+            - name: OTEL_METRICS_EXPORTER
+              value: "prometheus"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
           resources:
             requests:
               memory: "512Mi"
